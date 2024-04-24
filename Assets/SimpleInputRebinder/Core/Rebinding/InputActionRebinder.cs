@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
@@ -18,9 +19,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 
         private bool _isActionAssetDisabledWithOperation = true;
 
-        private string _bindingId;
-        private int _rebindableIndex = 0;
-        private InputActionReference _inputActionReference = null;
+
         private InputActionRebindingExtensions.RebindingOperation _rebindingOperation = null;
 
 
@@ -34,10 +33,6 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
         public InputActionRebinder() { }
 
 
-        public InputAction InputAction => _inputActionReference == null ? null : _inputActionReference.action;
-
-        public int RebindableIndex => _rebindableIndex;
-
         public bool IsActionAssetDisabledWithOperation
         {
             get => _isActionAssetDisabledWithOperation;
@@ -46,16 +41,6 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 
         public bool IsRebindingInProgress => _isRebindingInProgress;
 
-
-        public void SetInputActionReference(InputActionReference inputActionReference)
-        {
-            _inputActionReference = inputActionReference;
-        }
-
-        public void SetBindingId(string bindingId)
-        {
-            _bindingId = bindingId;
-        }
 
         public void SetCancelingThrough(string defaultCancelingThrough)
         {
@@ -104,38 +89,28 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
         }
 
 
-        public void StartRebinding()
+        public void StartRebinding(InputActionReference inputActionReference, int bindingIndex)
         {
             if (_isRebindingInProgress) return;
 
             UnityEngine.Debug.Log($"StartRebinding");
 
-            GetRebindingIndex();
-
-            if (_inputActionReference.action.bindings[_rebindableIndex].isComposite)
+            if (inputActionReference.action.bindings[bindingIndex].isComposite)
             {
-                int firstPartIndex = _rebindableIndex + 1;
-                if (firstPartIndex < _inputActionReference.action.bindings.Count &&
-                    _inputActionReference.action.bindings[firstPartIndex].isPartOfComposite)
+                int firstPartIndex = bindingIndex + 1;
+                if (firstPartIndex < inputActionReference.action.bindings.Count &&
+                    inputActionReference.action.bindings[firstPartIndex].isPartOfComposite)
                 {
-                    PerformRebinding(firstPartIndex, true);
+                    PerformRebinding(inputActionReference, firstPartIndex, true);
                 }
             }
             else
             {
-                PerformRebinding(_rebindableIndex);
+                PerformRebinding(inputActionReference, bindingIndex);
             }
         }
 
-        private void GetRebindingIndex()
-        {
-            if (string.IsNullOrEmpty(_bindingId) || this.InputAction == null) return;
-
-            var bindingId = new Guid(_bindingId);
-            _rebindableIndex = this.InputAction.bindings.IndexOf(x => x.id == bindingId);
-        }
-
-        private void PerformRebinding(int bindingIndex, bool isAllComposite = false)
+        private void PerformRebinding(InputActionReference inputActionReference, int bindingIndex, bool isAllComposite = false)
         {
             if (_rebindingOperation != null)
             {
@@ -145,12 +120,12 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 
             if (_isActionAssetDisabledWithOperation)
             {
-                _inputActionReference.asset.Disable();
+                inputActionReference.asset.Disable();
             }
 
             _isRebindingInProgress = true;
 
-            _rebindingOperation = this.InputAction.PerformInteractiveRebinding(bindingIndex);
+            _rebindingOperation = inputActionReference.action.PerformInteractiveRebinding(bindingIndex);
 
             _rebindingOperation.WithCancelingThrough(_defaultCancellingThrough);
 
@@ -168,7 +143,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
                 {
                     onInputActionChanged?.Invoke(new ActionChangedData()
                     {
-                        InputActionReference = _inputActionReference,
+                        InputActionReference = inputActionReference,
                         BindingIndex = bindingIndex
                     });
 
@@ -181,7 +156,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 
                     if (_isActionAssetDisabledWithOperation)
                     {
-                        _inputActionReference.asset.Enable();
+                        inputActionReference.asset.Enable();
                     }
 
                     _isRebindingInProgress = false;
@@ -194,7 +169,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
                 {
                     onInputActionChanged?.Invoke(new ActionChangedData()
                     {
-                        InputActionReference = _inputActionReference,
+                        InputActionReference = inputActionReference,
                         BindingIndex = bindingIndex
                     });
 
@@ -207,7 +182,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 
                     if (_isActionAssetDisabledWithOperation)
                     {
-                        _inputActionReference.asset.Enable();
+                        inputActionReference.asset.Enable();
                     }
 
                     _isRebindingInProgress = false;
@@ -218,10 +193,10 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
                     {
                         int nextBindingIndex = bindingIndex + 1;
 
-                        if (nextBindingIndex < this.InputAction.bindings.Count
-                            && this.InputAction.bindings[nextBindingIndex].isPartOfComposite)
+                        if (nextBindingIndex < inputActionReference.action.bindings.Count
+                            && inputActionReference.action.bindings[nextBindingIndex].isPartOfComposite)
                         {
-                            PerformRebinding(nextBindingIndex, true);
+                            PerformRebinding(inputActionReference, nextBindingIndex, true);
                         }
                     }
                 });
@@ -230,7 +205,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
             onRebindingSetup?.Invoke(new RebindingSetupData()
             {
                 RebindOperation = _rebindingOperation,
-                InputActionReference = _inputActionReference,
+                InputActionReference = inputActionReference,
                 IsAllComposite = isAllComposite,
                 BindingIndex = bindingIndex
             });

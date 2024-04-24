@@ -38,14 +38,11 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
         }
 
 
-        public void StartRebinding(InputActionReference inputActionReference, string bindingId)
+        public void StartRebinding(InputActionReference inputActionReference, int bindingIndex)
         {
             SetupRebinder();
 
-            _rebinder.SetInputActionReference(inputActionReference);
-            _rebinder.SetBindingId(bindingId);
-
-            _rebinder.StartRebinding();
+            _rebinder.StartRebinding(inputActionReference, bindingIndex);
         }
 
 

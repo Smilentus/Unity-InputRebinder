@@ -15,6 +15,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Views
         private InputActionBindingData _bindingData;
 
 
+
         private InputActionRebinder _rebinderReference;
 
 
@@ -43,6 +44,14 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Views
         private void OnDisable()
         {
             UnSubscribe();
+        }
+
+
+        public void SetBindingData(InputActionBindingData bindingData)
+        {
+            _bindingData = bindingData;
+
+            UpdateUI();
         }
 
 
@@ -75,7 +84,6 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Views
             UpdateUI();
         }
 
-
         private void OnInputActionChanged(ActionChangedData data)
         {
             UpdateUI();
@@ -107,7 +115,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Views
 
         public void Rebind()
         {
-            RebindingController.Instance.StartRebinding(_bindingData.InputActionReference, _bindingData.BindingId);
+            RebindingController.Instance.StartRebinding(_bindingData.InputActionReference, _bindingData.BindingIndex);
         }
     }
 }
