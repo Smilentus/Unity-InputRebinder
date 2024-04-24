@@ -1,9 +1,9 @@
 #if UNITY_EDITOR
+using Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding;
 using System.Linq;
 
 namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Editor
 {
-    using Dimasyechka.Lubribrary.SimpleInputRebinder.Core;
     using UnityEditor;
     using UnityEngine;
     using UnityEngine.InputSystem;
@@ -15,6 +15,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Editor
         {
             _actionProperty = property.FindPropertyRelative("InputActionReference");
             _bindingProperty = property.FindPropertyRelative("BindingId");
+            _bindingIndexProperty = property.FindPropertyRelative("BindingIndex");
             _displayStringOptionsProperty = property.FindPropertyRelative("DisplayStringOptions");
 
             RefreshBindingOptions();
@@ -38,6 +39,10 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Editor
                 var optionsNew = (InputBinding.DisplayStringOptions)EditorGUILayout.EnumFlagsField(_displayOptionsLabel, optionsOld);
                 if (optionsOld != optionsNew)
                     _displayStringOptionsProperty.intValue = (int)optionsNew;
+
+                GUI.enabled = false;
+                EditorGUILayout.PropertyField(_bindingIndexProperty);
+                GUI.enabled = true;
             }
 
             if (EditorGUI.EndChangeCheck())
@@ -71,6 +76,7 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Editor
             {
                 var binding = bindings[i];
                 var bindingId = binding.id.ToString();
+                var bindingIndex = 0;
                 var haveBindingGroups = !string.IsNullOrEmpty(binding.groups);
 
                 var displayOptions =
@@ -104,10 +110,13 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Editor
                 if (currentBindingId == bindingId)
                     _selectedBindingOption = i;
             }
+
+            _bindingIndexProperty.intValue = _selectedBindingOption;
         }
 
         private SerializedProperty _actionProperty;
         private SerializedProperty _bindingProperty;
+        private SerializedProperty _bindingIndexProperty;
         private SerializedProperty _displayStringOptionsProperty;
 
         private GUIContent _bindingLabel = new GUIContent("Binding");

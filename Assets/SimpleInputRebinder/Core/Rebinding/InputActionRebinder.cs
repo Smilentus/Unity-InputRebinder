@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
-namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
+namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core.Rebinding
 {
     // Разбить на более мелкую ответственность, всё равно много всего в одном месте - удолить
+    // Плюс идея всё-таки вынести это в общий класс контроллер, к которому мы обращаемся, чтобы управлять более просто
     public class InputActionRebinder
     {
         public event Action<ActionChangedData> onInputActionChanged;
@@ -14,6 +15,8 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
         public event Action<RebindingOperationCancelationData> onOperationCanceled;
         public event Action<RebindingOperationCompletionData> onOperationCompleted;
 
+
+        private bool _isActionAssetDisabledWithOperation = true;
 
         private string _bindingId;
         private int _rebindableIndex = 0;
@@ -25,18 +28,23 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
         private string _defaultCancellingThrough = "<Keyboard>/escape";
 
 
-        public InputActionRebinder(InputActionReference inputActionReference, string bindingId)
-        {
-            _inputActionReference = inputActionReference;
-            _bindingId = bindingId;
+        private bool _isRebindingInProgress = false;
 
-            _bindingExcludings = new List<string>();
-        }
+
+        public InputActionRebinder() { }
 
 
         public InputAction InputAction => _inputActionReference == null ? null : _inputActionReference.action;
 
         public int RebindableIndex => _rebindableIndex;
+
+        public bool IsActionAssetDisabledWithOperation
+        {
+            get => _isActionAssetDisabledWithOperation;
+            set => _isActionAssetDisabledWithOperation = value;
+        }
+
+        public bool IsRebindingInProgress => _isRebindingInProgress;
 
 
         public void SetInputActionReference(InputActionReference inputActionReference)
@@ -47,8 +55,6 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
         public void SetBindingId(string bindingId)
         {
             _bindingId = bindingId;
-
-            GetRebindingIndex();
         }
 
         public void SetCancelingThrough(string defaultCancelingThrough)
@@ -100,6 +106,8 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
 
         public void StartRebinding()
         {
+            if (_isRebindingInProgress) return;
+
             UnityEngine.Debug.Log($"StartRebinding");
 
             GetRebindingIndex();
@@ -125,11 +133,6 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
 
             var bindingId = new Guid(_bindingId);
             _rebindableIndex = this.InputAction.bindings.IndexOf(x => x.id == bindingId);
-            
-            //if (_rebindableIndex == -1)
-            //{
-            //    _rebindableIndex = 0;
-            //}
         }
 
         private void PerformRebinding(int bindingIndex, bool isAllComposite = false)
@@ -140,7 +143,12 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
                 DisposeOperation();
             }
 
-            this.InputAction.Disable();
+            if (_isActionAssetDisabledWithOperation)
+            {
+                _inputActionReference.asset.Disable();
+            }
+
+            _isRebindingInProgress = true;
 
             _rebindingOperation = this.InputAction.PerformInteractiveRebinding(bindingIndex);
 
@@ -171,7 +179,12 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
 
                     DisposeOperation();
 
-                    this.InputAction.Enable();
+                    if (_isActionAssetDisabledWithOperation)
+                    {
+                        _inputActionReference.asset.Enable();
+                    }
+
+                    _isRebindingInProgress = false;
 
                     UnityEngine.Debug.Log($"OnCancelRebinding");
                 });
@@ -190,9 +203,14 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
                         RebindingOperation = _rebindingOperation
                     });
 
-                    DisposeOperation(); 
-                    
-                    this.InputAction.Enable();
+                    DisposeOperation();
+
+                    if (_isActionAssetDisabledWithOperation)
+                    {
+                        _inputActionReference.asset.Enable();
+                    }
+
+                    _isRebindingInProgress = false;
 
                     UnityEngine.Debug.Log($"OnCompleteRebinding");
 
@@ -211,9 +229,10 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
 
             onRebindingSetup?.Invoke(new RebindingSetupData()
             {
+                RebindOperation = _rebindingOperation,
                 InputActionReference = _inputActionReference,
-                OperationTitle = $"Назначение нового действия для '{this.InputAction.name}'",
-                OperationStatus = "Ожидание ввода..."
+                IsAllComposite = isAllComposite,
+                BindingIndex = bindingIndex
             });
 
 
@@ -224,10 +243,11 @@ namespace Dimasyechka.Lubribrary.SimpleInputRebinder.Core
     [Serializable]
     public class RebindingSetupData
     {
+        public InputActionRebindingExtensions.RebindingOperation RebindOperation;
         public InputActionReference InputActionReference;
 
-        public string OperationTitle;
-        public string OperationStatus;
+        public bool IsAllComposite;
+        public int BindingIndex;
     }
 
 
